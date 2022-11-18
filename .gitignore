@@ -13,3 +13,13 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+.idea
+.vim
+.vscode
+.vs
+*.iml
+*.ipr
+*.iws
+*.sublime-workspace
+*.sublime-project
+*.swp
