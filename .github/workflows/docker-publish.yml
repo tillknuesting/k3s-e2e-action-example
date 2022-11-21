@@ -29,15 +29,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Prepare docker registry and k3s cluster
         run: |
             chmod +x ./testing/k3s-setup.sh
             ./testing/k3s-setup.sh
             while [[ $(kubectl get nodes -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-            do echo "Waiting for cluster nodes to be ready"; sleep 3; done
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
+            do echo "Waiting for cluster nodes to be ready"; sleep 1; done
 
       - uses: actions/cache@v3
         with:
@@ -70,3 +68,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
