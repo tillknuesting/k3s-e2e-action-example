@@ -78,7 +78,7 @@ jobs:
            go version
            cd ./testing/go
            go mod tidy
-           go run test
+           go test
           
            
 
