@@ -63,8 +63,7 @@ jobs:
         uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
           context: operator
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/${{ github.actor }}/k3s-e2e-action-example:main:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
