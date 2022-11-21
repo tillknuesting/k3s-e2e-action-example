@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -35,7 +36,7 @@ func headers(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-
+	log.Println("Starting container")
 	// We register our handlers on server routes using the
 	// `http.HandleFunc` convenience function. It sets up
 	// the *default router* in the `net/http` package and
