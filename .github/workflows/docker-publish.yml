@@ -28,6 +28,7 @@ jobs:
       id-token: write
 
     steps:
+      - uses: actions/checkout@v3
       - name: Prepare docker registry and k3s cluster
         run: |
             chmod +x ./testing/k3s-setup.sh
