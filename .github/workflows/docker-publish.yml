@@ -19,8 +19,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
-
+  E2E Test K3s:
     runs-on: ubuntu-latest
     permissions:
       contents: read
