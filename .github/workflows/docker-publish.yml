@@ -69,3 +69,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - uses: actions/setup-go@v3
+          with:
+            go-version-file: 'testing/go/go.mod'
+            check-latest: true
+            cache: true
+      - run: go version
+
+
