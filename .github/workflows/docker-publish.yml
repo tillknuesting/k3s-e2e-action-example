@@ -78,7 +78,7 @@ jobs:
            go version
            cd ./testing/go
            go mod tidy
-           go run ./testing/go/e2e.go
+           go run e2e.go
           
            
 
