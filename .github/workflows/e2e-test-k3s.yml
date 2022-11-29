@@ -10,8 +10,13 @@ on:
     branches: [ main ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
+    paths:
+        - operator/**
   pull_request:
     branches: [ main ]
+    paths:
+        - operator/**
+ 
 
 env:
   REGISTRY: ghcr.io
