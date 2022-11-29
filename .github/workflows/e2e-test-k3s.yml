@@ -36,19 +36,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Prepare docker registry and k3s cluster
-        run: |
-            chmod +x ./testing/k3s-setup.sh
-            ./testing/k3s-setup.sh
-            while [[ $(kubectl get nodes -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-            do echo "Waiting for cluster nodes to be ready"; sleep 1; done
-
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
 
-      # Login against a Docker registry
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
         with:
           registry: ${{ env.REGISTRY }}
@@ -69,12 +64,19 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
-          context: .
+          context: operator
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          
+      - name: Prepare docker registry and k3s cluster
+        run: |
+            chmod +x ./testing/k3s-setup.sh
+            ./testing/k3s-setup.sh
+            while [[ $(kubectl get nodes -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
+            do echo "Waiting for cluster nodes to be ready"; sleep 1; done
 
       - uses: actions/setup-go@v3
         with:
