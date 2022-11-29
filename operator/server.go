@@ -40,7 +40,7 @@ func main() {
 	// We register our handlers on server routes using the
 	// `http.HandleFunc` convenience function. It sets up
 	// the *default router* in the `net/http` package and
-	// takes a function as an argument.
+	// takes a function as an argument. t
 	http.HandleFunc("/hello", hello)
 	http.HandleFunc("/headers", headers)
 
