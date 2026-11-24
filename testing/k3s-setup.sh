@@ -11,6 +11,11 @@ docker run -d \
 -v "$PWD/registry:/var/lib/registry" \
 registry:2
 
+echo "Waiting for local registry to accept requests"
+until curl -s http://registry.localhost:5000/v2/ > /dev/null; do
+  sleep 2
+done
+
 echo "Starting K3s cluster"
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.24.7+k3s1" K3S_KUBECONFIG_MODE=777 INSTALL_K3S_EXEC="server --disable traefik" sh -
 mkdir -p ~/.kube

@@ -1,23 +1,30 @@
-name: Docker
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+name: E2E Tests (k3s)
 
 on:
-  pull_request:
-    branches: [ main ]
+  push:
+    branches:
+      - main
     paths:
-        - operator/**
- 
+      - "operator/**"
+      - "testing/**"
+      - ".github/workflows/e2e-test-k3s.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "operator/**"
+      - "testing/**"
+      - ".github/workflows/e2e-test-k3s.yml"
+  workflow_dispatch:
+
 env:
   REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
+  LOCAL_REGISTRY: registry.localhost:5000
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   run-e2e-tests:
+    name: End-to-end tests on k3s
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,44 +32,36 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: "1.19"
+          cache: true
 
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
-      - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
       - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        id: build
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
         with:
           context: operator
           push: true
@@ -70,26 +69,62 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          
-      - name: Prepare docker registry and k3s cluster
+
+      - name: Prepare local registry and start K3s cluster
         run: |
-            chmod +x ./testing/k3s-setup.sh
-            ./testing/k3s-setup.sh
-            while [[ $(kubectl get nodes -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]];
-            do echo "Waiting for cluster nodes to be ready"; sleep 1; done
+          chmod +x ./testing/k3s-setup.sh
+          ./testing/k3s-setup.sh
 
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '>=1.19.0'
-          check-latest: true
-
-      - name: Run E2E tests on k3s cluster
+      - name: Wait for Kubernetes API server and nodes
         run: |
-           go version
-           cd ./testing/go
-           go mod tidy
-           go test
-          
-           
+          echo "Waiting for Kubernetes API server..."
+          tries=0
+          until kubectl get --raw /healthz > /dev/null 2>&1; do
+            tries=$((tries + 1))
+            if [ "$tries" -ge 300 ]; then
+              echo "Timed out waiting for Kubernetes API server to become healthy"
+              exit 1
+            fi
+            sleep 2
+          done
 
+          echo "Waiting for nodes to become ready..."
+          tries=0
+          until [[ $(kubectl get nodes -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}') == "True" ]]; do
+            tries=$((tries + 1))
+            if [ "$tries" -ge 300 ]; then
+              echo "Timed out waiting for k3s nodes to become ready"
+              exit 1
+            fi
+            sleep 2
+          done
+          kubectl get nodes
 
+      - name: Build and push image to local registry
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Pull request detected: building image for the local registry"
+            docker build \
+              --tag "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
+              operator
+            docker push "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest"
+          else
+            echo "Push to main detected: reusing the freshly built GHCR image"
+            docker pull "${REGISTRY}/${IMAGE_NAME}:latest"
+            docker tag "${REGISTRY}/${IMAGE_NAME}:latest" "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest"
+            docker push "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest"
+          fi
+
+      - name: Deploy to k3s cluster
+        run: |
+          kubectl apply -f deployment/deployment.yaml
+          kubectl set image deployment/hello \
+            hello="${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
+            --namespace default
+          kubectl rollout status deployment/hello --timeout=300s
+
+      - name: Run E2E tests
+        run: |
+          cd ./testing/go
+          go mod download
+          go test -v ./...
