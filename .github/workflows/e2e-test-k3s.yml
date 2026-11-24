@@ -24,12 +24,17 @@ env:
 
 jobs:
   run-e2e-tests:
-    name: End-to-end tests on k3s
+    name: End-to-end tests on k3s (${{ matrix.k8s-version }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        k8s-version: [v1.24.7+k3s1, v1.25.3+k3s1, v1.26.4+k3s1]
 
     steps:
       - name: Checkout repository
@@ -71,6 +76,8 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Prepare local registry and start K3s cluster
+        env:
+          K3S_VERSION: ${{ matrix.k8s-version }}
         run: |
           chmod +x ./testing/k3s-setup.sh
           ./testing/k3s-setup.sh

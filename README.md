@@ -35,6 +35,14 @@ The [`E2E Tests (k3s)`](.github/workflows/e2e-test-k3s.yml) workflow runs the fu
 
 The Go test in [`testing/go/e2e_test.go`](testing/go/e2e_test.go) waits for the `hello` deployment rollout to complete and then verifies that the pod is running.
 
+## Matrix testing
+
+The workflow runs the E2E pipeline against a matrix of K3s versions —
+`v1.24.7+k3s1`, `v1.25.3+k3s1` and `v1.26.4+k3s1` — via the job's
+`strategy.matrix`. Each version runs the full pipeline (build → local
+registry → K3s → deploy → E2E test) on its own runner; failures are
+reported per version (`fail-fast: false`).
+
 ## Running it
 
 - Open a pull request touching `operator/` or `testing/` (or the workflow itself) to see the full E2E pipeline run on `ubuntu-latest`.
