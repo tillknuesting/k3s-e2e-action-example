@@ -114,10 +114,14 @@ jobs:
 
       - name: Build and push image to local registry
         run: |
+          set -x
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "Pull request detected: building image for the local registry"
-            docker build \
+            docker buildx build \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
               --tag "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
+              --load \
               operator
             docker push "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest"
           else
@@ -129,6 +133,7 @@ jobs:
 
       - name: Deploy to k3s cluster
         run: |
+          set -x
           kubectl apply -f deployment/deployment.yaml
           kubectl set image deployment/hello \
             hello="${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
