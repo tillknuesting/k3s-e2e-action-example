@@ -45,7 +45,7 @@ reported per version (`fail-fast: false`).
 
 ## Running it
 
-- Open a pull request touching `operator/` or `testing/` (or the workflow itself) to see the full E2E pipeline run on `ubuntu-latest`.
+- Open a pull request touching `operator/` or `testing/` (or the workflow itself) to see the full E2E pipeline run on `ubuntu-24.04`.
 - Push to `main` to additionally publish the image to GHCR and run the same pipeline against the fresh image.
 
 ## Notes

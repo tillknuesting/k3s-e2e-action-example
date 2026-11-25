@@ -29,7 +29,7 @@ env:
 jobs:
   run-e2e-tests:
     name: End-to-end tests on k3s (${{ matrix.k8s-version }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read
