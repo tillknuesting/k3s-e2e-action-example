@@ -17,6 +17,10 @@ on:
       - ".github/workflows/e2e-test-k3s.yml"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   LOCAL_REGISTRY: registry.localhost:5000
@@ -26,6 +30,7 @@ jobs:
   run-e2e-tests:
     name: End-to-end tests on k3s (${{ matrix.k8s-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
